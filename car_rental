@@ -1,0 +1,91 @@
+CREATE DATABASE car_rental;
+
+CREATE TABLE categories(
+id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+category VARCHAR(30) NOT NULL,
+daily_rate DECIMAL(5,2) NOT NULL,
+weekly_rate DECIMAL(5,2) NOT NULL,
+monthly_rate DECIMAL(5,2) NOT NULL,
+weekend_rate DECIMAL(5,2) NOT NULL
+);
+CREATE TABLE cars(
+id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+plate_number INT NOT NULL,
+make varchar(15) NOT NULL,
+model varchar(15) NOT NULL,
+car_year DATE,
+category_id int NOT NULL,
+doors INT,
+picture BLOB,
+car_condition VARCHAR(15),
+available BOOLEAN
+);
+
+CREATE TABLE employees(
+id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+first_name VARCHAR(15) NOT NULL,
+last_name VARCHAR(15) NOT NULL,
+title  VARCHAR(15) NOT NULL,
+notes text
+);
+
+CREATE TABLE customers(
+id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+driver_licence_number INT NOT NULL,
+full_name  VARCHAR(35) NOT NULL,
+address  VARCHAR(35),
+city  VARCHAR(15),
+zip_code INT,
+notes TEXT
+);
+
+CREATE TABLE rental_orders (
+    id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    employee_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    car_id INT NOT NULL,
+    car_condition VARCHAR(15),
+    tank_level DECIMAL(5 , 2 ),
+    kilometrage_start DECIMAL(5 , 2 ),
+    kilometrage_end DECIMAL(5 , 2 ),
+    total_kilometrage DECIMAL(5 , 2 ),
+    start_date DATE,
+    end_date DATE,
+    total_days INT,
+    rate_applied DECIMAL(5 , 2 ),
+    tax_rate DECIMAL(5 , 2 ),
+    order_status VARCHAR(10),
+    notes TEXT
+);
+
+INSERT INTO categories(category, daily_rate, weekly_rate, monthly_rate, weekend_rate)
+VALUES('first category', 10.2, 11.2, 12.2, 13.2),
+('second category', 1.2, 1.2, 1.2, 1.2),
+('third category', 0.2, 1.2, 2.2, 3.2);
+
+INSERT INTO cars(plate_number, make, model, car_year, category_id, doors, picture, car_condition, available)
+VALUES(1234, 'renault', 'clio', '2004/12/12', 1, 4, LOAD_FILE('E:/Images/jack.jpg'), 'used', 0),
+(1554, 'bmw', 'e91', '2006/12/12', 1, 4, LOAD_FILE('E:/Images/jack.jpg'), 'bran new', 0),
+(3545, 'VW', 'golf', '2004/12/12', 1, 4, LOAD_FILE('E:/Images/jack.jpg'), 'new', 1);
+
+
+INSERT INTO employees(first_name, last_name, title, notes)
+VALUES('peter', 'petrov', 'shefa', 'asdfgdh'),
+('ivan', 'ivanov', 'menidjara', 'asdfgdh'),
+('gosho', 'goshov', 'stajant', 'asdfgdh');
+
+
+INSERT INTO customers(driver_licence_number, full_name, address, city, zip_code, notes)
+VALUES(543, 'polche', 'studentski', 'sofia', 0001, 'asdfgh'),
+(432, 'vikche', 'durvenica', 'sofia', 0001, 'asdfgh'),
+(321, 'mikche', 'studentski', 'sofia', 0001, 'asdfgh');
+
+INSERT INTO rental_orders(employee_id, customer_id,
+ car_id, car_condition, tank_level,
+ kilometrage_start, kilometrage_end,
+ total_kilometrage, start_date, end_date, 
+ total_days, rate_applied, tax_rate, order_status, notes)
+VALUES(1, 1, 1, 'new', 13.2, 0.0, 100.7, 100.4, '2020/01/16', '2020/01/26', 10, 10,10, 'available', 'asdfghjkl'),
+(2, 2, 3, 'new', 13.2, 0.0, 100.7, 100.4, '2020/01/16', '2020/01/26', 10, 10,10, 'available', 'asdfghjkl'),
+(3, 3, 2, 'new', 13.2, 0.0, 100.7, 100.4, '2020/01/16', '2020/01/26', 10, 10,10, 'available', 'asdfghjkl');
+
