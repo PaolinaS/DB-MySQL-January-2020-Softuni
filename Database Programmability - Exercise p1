@@ -102,11 +102,25 @@ BEGIN
 	FROM account_holders AS ah
 	JOIN accounts AS a
 	ON a.account_holder_id = ah.id
-	GROUP BY ah.account_holder_id
-	HAVING SUM(balance) > salary_level
-	ORDER BY a.id;
-
+	GROUP BY ah.id
+	HAVING SUM(a.balance) > salary_level
+	ORDER BY ah.id;
 END;
+
+
+#10. Future Value Function
+
+CREATE FUNCTION ufn_calculate_future_value(initial_sum DECIMAL(19,4), interest_rate double , years INT)
+RETURNS DECIMAL(19, 4)
+DETERMINISTIC
+BEGIN
+	DECLARE result DECIMAL(19, 4);
+	RETURN initial_sum * POWER((1 + interest_rate),years);
+END;
+
+#11. Calculating Interest
+
+
 
 #12. Deposit Money
 
@@ -122,9 +136,3 @@ BEGIN
         END IF;
 
 END;
-
-
-
-
-
-
