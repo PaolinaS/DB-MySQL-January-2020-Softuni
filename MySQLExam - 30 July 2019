@@ -73,6 +73,10 @@ REFERENCES users(id)
 
 
 #02. Insert
+/*For users with id between 16 and 20(inclusive), insert data in the likes table with the following values: 
+    • For users with even id, the like will be on an article, else – comment.
+    • Users’ username length will determine the article_id. 
+    • Users’ email length will determine the comment_id. */
 
 INSERT INTO likes (article_id, comment_id, user_id)
 SELECT
