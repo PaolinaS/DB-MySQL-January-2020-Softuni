@@ -1,0 +1,219 @@
+#01. Table Design
+
+CREATE TABLE categories(
+id INT(11) PRIMARY KEY AUTO_INCREMENT,
+category VARCHAR(30) NOT NULL
+);
+
+CREATE TABLE articles(
+id INT  AUTO_INCREMENT PRIMARY KEY,
+title  VARCHAR(50) NOT NULL,
+content TEXT NOT NULL,
+category_id INT,
+
+CONSTRAINT fk_articles_categories
+FOREIGN KEY articles(category_id)
+REFERENCES categories(id)
+);
+
+CREATE TABLE users(
+id INT PRIMARY KEY AUTO_INCREMENT,
+username VARCHAR(30)  UNIQUE NOT NULL,
+`password` VARCHAR(30)  NOT NULL,
+email VARCHAR(50)  NOT NULL
+);
+
+CREATE TABLE users_articles(
+user_id INT, 
+article_id INT,
+
+CONSTRAINT fk_users_articles_users
+FOREIGN KEY (user_id)
+REFERENCES users(id),
+
+CONSTRAINT fk_users_articles_articles
+FOREIGN KEY (article_id)
+REFERENCES articles(id)
+);
+
+CREATE TABLE comments(
+id INT PRIMARY KEY AUTO_INCREMENT,
+`comment` VARCHAR(255) NOT NULL,
+article_id INT NOT NULL,
+user_id INT NOT NULL,
+
+CONSTRAINT fk_comments_articles
+FOREIGN KEY (article_id)
+REFERENCES articles(id),
+
+CONSTRAINT fk_comments_users
+FOREIGN KEY (user_id)
+REFERENCES users(id)
+);
+
+
+CREATE TABLE likes(
+id INT AUTO_INCREMENT PRIMARY KEY,
+article_id INT,
+comment_id INT,
+user_id INT NOT NULL,
+
+CONSTRAINT fk_likes_articles
+FOREIGN KEY (article_id)
+REFERENCES articles(id),
+
+CONSTRAINT fk_likes_comments
+FOREIGN KEY (comment_id)
+REFERENCES comments(id),
+
+CONSTRAINT fk_likes_users
+FOREIGN KEY (user_id)
+REFERENCES users(id)
+);
+
+
+#02. Insert
+
+INSERT INTO likes (article_id, comment_id, user_id)
+SELECT
+ IF(u.id % 2 = 0, CHAR_LENGTH(u.username), null),
+ /*Users’ username length will determine the article_id. */
+ IF(u.id % 2 = 1, CHAR_LENGTH(u.email), null),
+ /*Users’ email length will determine the comment_id. */
+ u.id
+ FROM users AS u
+ WHERE u.id BETWEEN 16 AND 20;
+ 
+ #03. Update
+ 
+  UPDATE comments AS c
+ SET comment = (
+	CASE 
+		WHEN   c.id % 2 = 0   THEN 'Very good article.'
+		WHEN   c.id % 3 = 0   THEN 'This is interesting.'
+        WHEN   c.id % 5 = 0   THEN 'I definitely will read the article again.'
+        WHEN   c.id % 7 = 0   THEN 'The universe is such an amazing thing.'
+        ELSE c.comment
+	END
+ )
+ WHERE c.id BETWEEN 1 AND 15;
+ 
+ #04. Delete
+# Delete all articles without category.
+
+ DELETE FROM articles
+ WHERE category_id IS NULL;
+ 
+ #05. Extract 3 biggest articles
+ /*Extract from the database, the 3 biggest articles and summarize their content.
+ The summary must be 20 symbols long plus "..." at the end. Order the results by article id.*/
+ 
+ SELECT nt.title, nt.summary
+ FROM (SELECT a.id, a.title, concat(LEFT(a.content, 20), '...') AS summary
+	  FROM articles AS a
+	  ORDER BY CHAR_LENGTH(a.content) DESC
+  	LIMIT  3) AS nt
+ ORDER BY nt.id
+ 
+ 
+ 
+#06. Golden articles
+/* When article has the same id as its author, it is considered Golden Article. 
+Extract from the database all golden articles. Order the results ascending by article id. */
+ 
+SELECT a.id, a.title
+FROM articles AS a
+JOIN users_articles AS ua
+ON a.id = ua.article_id
+WHERE ua.user_id = ua.article_id
+ORDER BY a.id;
+
+#07. Extract categories
+/* Extract from the database, all categories with their articles, and likes.
+Order them by count of likes descending,
+then by article's count descending 
+and lastly by category's id ascending. */
+# articles (count of articles for the given category)
+# likes (total likes for the given category)
+
+ SELECT c.category, count(DISTINCT a.id) AS article_count, count(l.id) AS likes_count
+ FROM categories AS c 
+ LEFT JOIN articles AS a
+ ON c.id = a.category_id
+ LEFT JOIN likes AS l
+ ON a.id = l.article_id
+ GROUP BY c.category
+ ORDER BY likes_count DESC, article_count DESC, c.id;
+ 
+ #08. Extract the most commented social article
+ 
+ SELECT a.title , count(comm.id) AS count
+ FROM articles AS a
+ JOIN categories AS c 
+ ON c.id = a.category_id
+ JOIN comments AS comm
+ ON a.id = comm.article_id
+ WHERE c.category = 'Social'
+ GROUP BY a.id
+ ORDER BY count DESC
+ LIMIT 1;
+ 
+ #09. Extract the less liked comments
+ 
+/*Extract from the database those comments that are not 
+liked by anyone and summarize them and order the results by comment id in descending order. 
+The summary must be 20 symbols long plus "..." at the end.*/
+
+SELECT concat(LEFT(c.comment, 20), '...') AS 'summary'
+FROM comments AS c
+LEFT JOIN likes AS l
+ON c.id = l.comment_id
+WHERE l.comment_id IS NULL
+ORDER BY c.id DESC
+
+#10. Get users articles count
+/* Ceate a user defined function with the name udf_users_articles_count(username VARCHAR(30))
+that receives a username and returns the number of articles this user has written. */
+
+CREATE FUNCTION  udf_users_articles_count(p_username VARCHAR(30)) 
+RETURNS INT
+DETERMINISTIC
+BEGIN 
+	DECLARE result INT;
+    SET result := (
+		SELECT count(ua.article_id) 
+        FROM users_articles AS ua
+        RIGHT JOIN users AS u
+        ON u.id = ua.user_id
+        WHERE u.username = p_username
+    );
+    RETURN result;
+END;
+
+#11. Like Article
+/* Create a user defined stored procedure with the name udp_like_article(username VARCHAR(30), title VARCHAR(30))
+that receives a username and article title and likes the article only if the given username and title exist. 
+If the modifying is not successful rollback any changes and
+throw an exception with error code ‘45000’ and message: "Non-existent user."
+or "Non-existent article.". */
+
+CREATE PROCEDURE udp_like_article(p_username VARCHAR(30), p_title VARCHAR(30))
+BEGIN 
+	IF ((SELECT count(*) FROM users AS u WHERE u.username = p_username) = 0)
+		THEN  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Non-existent user.'; 
+        ROLLBACK;
+	ELSEIF ((SELECT count(*) FROM articles AS a WHERE a.title = p_title) = 0)
+				THEN  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Non-existent article.'; 
+        ROLLBACK;
+	ELSE 
+		INSERT INTO likes(article_id, comment_id, user_id)
+		SELECT 
+		(SELECT id FROM articles WHERE title = p_title),
+		NULL,
+		(SELECT id FROM users WHERE username = p_username);
+		END IF;
+		
+END;
+
+
+ 
